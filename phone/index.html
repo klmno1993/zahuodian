@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=375,initial-scale=1" />
+    <title>Phone</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      :root {
+        --screen-w: 375px;
+        --screen-h: 740px;
+        --radius: 44px;
+        --safe-top: 54px;
+        --safe-bottom: 30px;
+        --island-w: 126px;
+        --island-h: 36px;
+      }
+ 
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background: transparent;
+        font-family: -apple-system, "Helvetica Neue", sans-serif;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+
+      /* ---- 手机壳 ---- */
+      .phone-frame {
+        position: relative;
+        width: var(--screen-w);
+        height: var(--screen-h);
+        background: #000;
+        border-radius: var(--radius);
+        overflow: hidden;
+        box-shadow:
+          0 0 0 2px #1a1a1a,
+          0 0 0 5px #0d0d0d,
+          0 20px 60px rgba(0, 0, 0, 0.45);
+      }
+
+      /* ---- 灵动岛 ---- */
+      .dynamic-island {
+        position: absolute;
+        top: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: var(--island-w);
+        height: var(--island-h);
+        background: #000;
+        border-radius: 20px;
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
+      }
+      .dynamic-island.expanded {
+        width: 350px;
+        height: 80px;
+        border-radius: 28px;
+      }
+      .island-notification {
+        display: none;
+        color: #fff;
+        font-size: 13px;
+        padding: 0 16px;
+        width: 100%;
+        align-items: center;
+        gap: 10px;
+      }
+      .dynamic-island.expanded .island-notification {
+        display: flex;
+      }
+      .island-notification .notif-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        flex-shrink: 0;
+      }
+      .island-notification .notif-text {
+        flex: 1;
+        min-width: 0;
+      }
+      .island-notification .notif-title {
+        font-weight: 600;
+        font-size: 13px;
+      }
+      .island-notification .notif-body {
+        font-size: 12px;
+        opacity: 0.7;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      /* ---- 壁纸 & 桌面 ---- */
+      .screen {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          145deg,
+          #0a0a2e 0%,
+          #1a0533 30%,
+          #2d1b69 60%,
+          #1a2a6c 100%
+        );
+        position: relative;
+      }
+
+      /* ---- 状态栏 ---- */
+      .status-bar {
+        position: absolute;
+        top: 14px;
+        left: 0;
+        width: 100%;
+        height: 24px;
+        padding: 0 28px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        z-index: 999;
+        color: #fff;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .status-icons {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 12px;
+      }
+
+      /* ---- 桌面图标网格 ---- */
+      .home-screen {
+        position: absolute;
+        top: var(--safe-top);
+        left: 0;
+        right: 0;
+        bottom: var(--safe-bottom);
+        padding: 36px 24px 80px;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        align-content: start;
+        gap: 24px 0;
+        transition:
+          opacity 0.3s,
+          transform 0.3s;
+      }
+      .home-screen.hidden {
+        opacity: 0;
+        transform: scale(0.92);
+        pointer-events: none;
+      }
+
+      .app-slot {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        position: relative;
+      }
+      .app-slot:active .app-icon {
+        transform: scale(0.88);
+      }
+
+      .app-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+        transition: transform 0.15s;
+        position: relative;
+      }
+      .app-name {
+        font-size: 11px;
+        color: #fff;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+      }
+
+      /* 角标 */
+      .badge {
+        position: absolute;
+        top: -4px;
+        right: -4px;
+        min-width: 20px;
+        height: 20px;
+        padding: 0 6px;
+        background: #ff3b30;
+        color: #fff;
+        font-size: 12px;
+        font-weight: 600;
+        border-radius: 10px;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+      }
+      .badge.visible {
+        display: flex;
+      }
+
+      /* ---- App 容器 (iframe) ---- */
+      .app-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 900;
+        transform: translateY(100%);
+        transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+        border-radius: var(--radius);
+        overflow: hidden;
+      }
+      .app-container.open {
+        transform: translateY(0);
+      }
+      .app-container iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+        background: #fff;
+      }
+
+      /* ---- Home Indicator ---- */
+      .home-indicator {
+        position: absolute;
+        bottom: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 134px;
+        height: 5px;
+        background: rgba(255, 255, 255, 0.6);
+        border-radius: 3px;
+        z-index: 1001;
+        cursor: pointer;
+      }
+      .app-container.open ~ .home-indicator {
+        background: rgba(255, 255, 255, 0.35);
+      }
+
+      /* ---- 空桌面提示 ---- */
+      .empty-hint {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: rgba(255, 255, 255, 0.3);
+        font-size: 15px;
+        text-align: center;
+        line-height: 2;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="phone-frame">
+      <div class="screen">
+        <!-- 灵动岛 -->
+        <div class="dynamic-island" id="dynamicIsland">
+          <div class="island-notification" id="islandNotif">
+            <div class="notif-icon" id="islandIcon"></div>
+            <div class="notif-text">
+              <div class="notif-title" id="islandTitle"></div>
+              <div class="notif-body" id="islandBody"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 状态栏 -->
+        <div class="status-bar">
+          <span id="statusTime">9:41</span>
+          <div class="status-icons">
+            <span>●●●●○</span>
+            <span>WiFi</span>
+            <span>🔋</span>
+          </div>
+        </div>
+
+        <!-- 桌面 -->
+        <div class="home-screen" id="homeScreen">
+          <!-- JS 动态生成 -->
+        </div>
+
+        <!-- App iframe 容器 -->
+        <div class="app-container" id="appContainer">
+          <iframe
+            id="appFrame"
+            sandbox="allow-scripts allow-same-origin allow-popups"
+            loading="lazy"
+          ></iframe>
+        </div>
+
+        <!-- Home Indicator -->
+        <div class="home-indicator" id="homeBtn"></div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        // ============ App 注册表 ============
+        const REPO_BASE = "https://https://cdn.jsdelivr.net/gh/klmno1993/st";
+        const APP_REGISTRY = {
+          微信: {
+            id: "wechat",
+            name: "微信",
+            emoji: "💬",
+            color: "#07C160",
+            url: REPO_BASE + "/wechat/index.html",
+          },
+          QQ: {
+            id: "qq",
+            name: "QQ",
+            emoji: "🐧",
+            color: "#12B7F5",
+            url: REPO_BASE + "/QQ/index.html",
+          },
+        };
+
+        // ============ 解析 URL 参数 ============
+        const params = new URLSearchParams(window.location.search);
+        const appsRaw = params.get("apps") || "";
+        const installedNames = appsRaw
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+
+        const installedApps = installedNames
+          .map((name) => APP_REGISTRY[name])
+          .filter(Boolean);
+
+        // ============ 状态 ============
+        const badges = {}; // { appId: number }
+        let currentApp = null; // 当前打开的 app id
+        let islandTimer = null;
+
+        // ============ 渲染桌面 ============
+        const homeScreen = document.getElementById("homeScreen");
+
+        if (installedApps.length === 0) {
+          homeScreen.innerHTML =
+            '<div class="empty-hint">没有已安装的 App<br>通过 ?apps=微信,QQ 安装</div>';
+        } else {
+          installedApps.forEach((app) => {
+            const slot = document.createElement("div");
+            slot.className = "app-slot";
+            slot.dataset.appId = app.id;
+            slot.innerHTML = `
+        <div class="app-icon" style="background:${app.color}">
+          ${app.emoji}
+          <div class="badge" id="badge-${app.id}"></div>
+        </div>
+        <span class="app-name">${app.name}</span>
+      `;
+            slot.addEventListener("click", () => openApp(app));
+            homeScreen.appendChild(slot);
+          });
+        }
+
+        // ============ 打开 App ============
+        const appContainer = document.getElementById("appContainer");
+        const appFrame = document.getElementById("appFrame");
+
+        function openApp(app) {
+          currentApp = app.id;
+          appFrame.src = app.url;
+          homeScreen.classList.add("hidden");
+          requestAnimationFrame(() => {
+            appContainer.classList.add("open");
+          });
+          // 打开后清除角标
+          updateBadge(app.id, 0);
+        }
+
+        // ============ 关闭 App（回桌面） ============
+        function closeApp() {
+          appContainer.classList.remove("open");
+          setTimeout(() => {
+            homeScreen.classList.remove("hidden");
+            appFrame.src = "about:blank";
+            if (currentApp) {
+              // 通知 app 进入后台（如果 iframe 还在的话已经销毁了，这里预留接口）
+            }
+            currentApp = null;
+          }, 380);
+        }
+
+        document.getElementById("homeBtn").addEventListener("click", closeApp);
+
+        // ============ 角标管理 ============
+        function updateBadge(appId, count) {
+          badges[appId] = count;
+          const el = document.getElementById("badge-" + appId);
+          if (!el) return;
+          if (count > 0) {
+            el.textContent = count > 99 ? "99+" : count;
+            el.classList.add("visible");
+          } else {
+            el.classList.remove("visible");
+          }
+        }
+
+        // ============ 灵动岛通知 ============
+        function showIslandNotification(appId, title, body) {
+          const app = installedApps.find((a) => a.id === appId);
+          if (!app) return;
+
+          const island = document.getElementById("dynamicIsland");
+          const iconEl = document.getElementById("islandIcon");
+          const titleEl = document.getElementById("islandTitle");
+          const bodyEl = document.getElementById("islandBody");
+
+          iconEl.style.background = app.color;
+          iconEl.textContent = app.emoji;
+          titleEl.textContent = title || app.name;
+          bodyEl.textContent = body || "";
+
+          island.classList.add("expanded");
+          clearTimeout(islandTimer);
+          islandTimer = setTimeout(() => {
+            island.classList.remove("expanded");
+          }, 3500);
+
+          // 点击灵动岛打开对应 App
+          island.onclick = () => {
+            island.classList.remove("expanded");
+            clearTimeout(islandTimer);
+            if (currentApp !== appId) openApp(app);
+            island.onclick = null;
+          };
+        }
+
+        // ============ postMessage 监听 ============
+        window.addEventListener("message", (e) => {
+          const msg = e.data;
+          if (!msg || !msg.type) return;
+
+          switch (msg.type) {
+            case "APP_READY":
+              // App 加载完成，可以在这里做点什么
+              break;
+
+            case "BADGE_UPDATE":
+              if (msg.appId && typeof msg.count === "number") {
+                updateBadge(msg.appId, msg.count);
+                // 如果 App 不在前台，弹灵动岛
+                if (currentApp !== msg.appId && msg.count > 0) {
+                  showIslandNotification(msg.appId, msg.title, msg.body);
+                }
+              }
+              break;
+
+            case "NOTIFICATION_PUSH":
+              if (msg.appId) {
+                showIslandNotification(msg.appId, msg.title, msg.body);
+              }
+              break;
+
+            case "APP_CLOSE":
+              closeApp();
+              break;
+          }
+        });
+
+        // ============ 时钟 ============
+        function updateTime() {
+          const now = new Date();
+          document.getElementById("statusTime").textContent =
+            now.getHours().toString().padStart(2, "0") +
+            ":" +
+            now.getMinutes().toString().padStart(2, "0");
+        }
+        updateTime();
+        setInterval(updateTime, 10000);
+      })();
+    </script>
+  </body>
+</html>
